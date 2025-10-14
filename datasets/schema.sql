@@ -20,9 +20,9 @@ CREATE TABLE Games (
 
 CREATE TABLE ReleaseDate (
     ReleaseDateID int,
-    ReleaseYear int,
-    ReleaseMonth int,
-    ReleaseDay int,
+    ReleaseYear int, -- check
+    ReleaseMonth int, -- check
+    ReleaseDay int, -- check
     PRIMARY KEY (ReleaseDateID)
 );
 
@@ -30,7 +30,7 @@ CREATE TABLE Sales(
     SalesID int,
     Launch_Price float,
     Discounted_Price float,
-    Estimated_Owners int,
+    Estimated_Owners int, -- check
     PRIMARY KEY (SalesID)
 );
 
@@ -53,11 +53,11 @@ CREATE TABLE Reviews(
 
 CREATE TABLE Playtime (
     PlaytimeID int,
-    Peak CCU int
-    Average playtime forever float,
-    Average playtime two weeks float,
-    Median playtime forever float,
-    Median playtime two weeks float,
+    Peak_CCU int,
+    AveragePlaytimeForever float,
+    AveragePlaytimeTwoWeeks float,
+    MedianPlaytimeForever float,
+    MedianPlaytimeTwoWeeks float,
     PRIMARY KEY (PlaytimeID)
 );
 
