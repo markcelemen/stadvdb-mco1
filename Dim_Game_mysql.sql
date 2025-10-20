@@ -18,8 +18,9 @@ CREATE TABLE `Dim_Game` (
   `Reviews Total` INT,
   `Reviews Score Fancy` INT,
   `Launch Price` INT,
-  `Tags` VARCHAR(255)
+  `Tags` VARCHAR(510)
 );
+
 INSERT INTO `Dim_Game` VALUES ('Galactic Bowling', '2008-10-21', '0 - 20000', 0, True, False, False, 0, 0, 6, 11, 0, 0, 0, 0, 'galactic bowling', 12, 33, 1999, '3.0,Bowling,Casual,Indie,Sports');
 INSERT INTO `Dim_Game` VALUES ('Train Bandit', '2017-10-12', '0 - 20000', 0, True, True, False, 0, 0, 53, 5, 0, 0, 0, 0, 'train bandit', 53, 86, 99, '2.0,2D,Action,Arcade,Blood,Casual,Comedy,Controller,Difficult,Fast-Paced,Funny,Gore,Indie,Minimalist,Parody,Pixel Graphics,Retro,Score Attack,Singleplayer,Violent,Western');
 INSERT INTO `Dim_Game` VALUES ('Jolt Project', '2021-11-17', '0 - 20000', 0, True, False, False, 0, 0, 0, 0, 0, 0, 0, 0, 'jolt project', 0, 0, 499, '3.0');
