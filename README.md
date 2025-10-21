@@ -11,3 +11,12 @@ Make a connection and set the credentials in the code.
 Then execute:
 CREATE DATABASE <dbname>;
 USE <dbname>;
+
+Dependencies for running backend:
+npm install dotenv express mysql2 cors
+
+Change the .env file to:
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=<your password>
+DB_NAME=<dbname>
