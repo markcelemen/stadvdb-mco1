@@ -20,3 +20,6 @@ DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=<your password>
 DB_NAME=<dbname>
+
+Run backend on local port 5000 using:
+node server.js
