@@ -1,0 +1,9 @@
+Ignore all CSV files
+*.csv
+
+Optional: Ignore other common files/folders
+node_modules/
+.env
+pycache/
+*.pyc
+.ipynb_checkpoints/
