@@ -9,7 +9,9 @@ pip install mysql-connector-python
 and setup in mysql workbench:
 Make a connection and set the credentials in the code.
 Then execute:
-CREATE DATABASE <dbname>;
+
+DROP DATABASE IF EXISTS dimgame;
+CREATE DATABASE dimgame;
 USE <dbname>;
 
 Dependencies for running backend:
