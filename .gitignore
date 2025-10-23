@@ -1,5 +1,9 @@
-# macOS system files
-.DS_Store
+Ignore all CSV files
+*.csv
 
-# Node dependencies
+Optional: Ignore other common files/folders
 node_modules/
+.env
+pycache/
+*.pyc
+.ipynb_checkpoints/
