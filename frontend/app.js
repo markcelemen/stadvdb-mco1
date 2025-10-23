@@ -1,14 +1,9 @@
-// app.js - Plain JS + Chart.js frontend for your Express API (http://localhost:5000/api)
-// Expects Chart.js already loaded in index.html via CDN and your styles.css present.
-
 const API_BASE = "http://localhost:5000/api";
 
 (function () {
-  // DOM helpers
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
 
-  // Ensure root exists
   const root = document.getElementById('root') || (function () {
     const r = document.createElement('div');
     r.id = 'root';
@@ -16,7 +11,6 @@ const API_BASE = "http://localhost:5000/api";
     return r;
   })();
 
-  // Tabs config
   const tabs = [
     { id: 'peak', label: 'Peak Users', endpoint: `${API_BASE}/most-played` },
     { id: 'releases', label: 'Releases', endpoint: `${API_BASE}/release-trends?granularity=year` },
@@ -25,14 +19,12 @@ const API_BASE = "http://localhost:5000/api";
     { id: 'priceScore', label: 'Price vs Rating', endpoint: `${API_BASE}/price-vs-rating` },
   ];
 
-  // Cache per-tab
   const cache = {};
   tabs.forEach(t => cache[t.id] = { loading: false, data: null, error: null });
 
   let currentChart = null;
   let currentTab = tabs[0].id;
 
-  // Build UI
   const tabsContainer = document.createElement('div');
   tabsContainer.className = 'tabs-container';
   tabs.forEach(t => {
@@ -42,7 +34,6 @@ const API_BASE = "http://localhost:5000/api";
     el.dataset.tab = t.id;
     el.addEventListener('click', () => activateTab(t.id));
     el.addEventListener('keypress', (e) => { if (e.key === 'Enter') activateTab(t.id); });
-    // dblclick to force refresh
     el.addEventListener('dblclick', () => forceRefresh(t.id));
     tabsContainer.appendChild(el);
   });
@@ -69,7 +60,6 @@ const API_BASE = "http://localhost:5000/api";
   chartWrapper.appendChild(title);
   chartWrapper.appendChild(canvas);
 
-  // Attach to DOM
   root.innerHTML = '';
   root.appendChild(tabsContainer);
   content.appendChild(statusEl);
@@ -89,22 +79,18 @@ const API_BASE = "http://localhost:5000/api";
     return res.json();
   }
 
-  // Activate tab
   function activateTab(tabId) {
     if (currentTab === tabId) return;
     currentTab = tabId;
-    // toggle active class
     $$('.tab-item', tabsContainer).forEach(el => el.classList.toggle('active', el.dataset.tab === tabId));
     renderTab();
   }
 
-  // Force refresh (double-click)
   function forceRefresh(tabId) {
     cache[tabId] = { loading: false, data: null, error: null };
     if (tabId === currentTab) renderTab();
   }
 
-  // Render current tab (fetch if needed)
   function renderTab() {
     const slot = cache[currentTab];
     const tabCfg = tabs.find(t => t.id === currentTab);
@@ -112,21 +98,29 @@ const API_BASE = "http://localhost:5000/api";
 
     // clear previous chart
     if (currentChart) {
-      try { currentChart.destroy(); } catch (e) {}
-      currentChart = null;
+        try { currentChart.destroy(); } catch (e) {}
+        currentChart = null;
     }
+
+    // clear previous peak table
+    const oldTable = document.querySelector('.peak-table');
+    if (oldTable) oldTable.remove();
+
+    // always ensure the canvas is visible before new render
+    const canvas = document.getElementById('reportChart');
+    if (canvas) canvas.style.display = '';
 
     if (slot.loading) { setStatus('Loading...'); return; }
     if (slot.error) { setStatus(`Error: ${slot.error}`, true); return; }
     if (slot.data) {
-      clearStatus();
-      drawForTab(currentTab, slot.data);
-      return;
+        clearStatus();
+        drawForTab(currentTab, slot.data);
+        return;
     }
 
-    // not loaded -> fetch
     loadTabData(currentTab, tabCfg.endpoint);
   }
+
 
   function getTitle(tabId) {
     switch (tabId) {
@@ -183,23 +177,37 @@ const API_BASE = "http://localhost:5000/api";
 
   // 1) Peak CCU - bar
   function drawPeak(ctx, raw) {
-    const mapped = raw.map(r => ({
-      name: r.AppName ?? r.appname ?? r.name ?? 'Unknown',
-      peak: Number(r.Peak_CCU ?? r.Peak_CCU ?? r.Peak ?? r.peak ?? 0)
-    })).sort((a,b) => b.peak - a.peak);
+    const canvas = document.getElementById('reportChart');
+    canvas.style.display = 'none';
 
-    const labels = mapped.map(m => m.name);
-    const values = mapped.map(m => m.peak);
+    const wrapper = document.querySelector('.chart-wrapper');
+    if (!wrapper) return;
 
-    currentChart = new Chart(ctx, {
-      type: 'bar',
-      data: { labels, datasets: [{ label: 'Peak CCU', data: values, backgroundColor: 'rgba(11,132,255,0.85)' }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: { ticks: { autoSkip: false } }, y: { beginAtZero: true } },
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `${ctx.formattedValue}` } } }
-      }
+    const oldTable = wrapper.querySelector('.peak-table');
+    if (oldTable) oldTable.remove();
+
+    const mapped = (raw || [])
+        .map(r => ({
+        name: r.AppName ?? r.appname ?? r.name ?? 'Unknown',
+        peak: Number(r.Peak_CCU ?? r.Peak ?? r.peak ?? 0)
+        }))
+        .sort((a, b) => b.peak - a.peak);
+
+    const table = document.createElement('div');
+    table.className = 'peak-table';
+
+    mapped.forEach((row, i) => {
+        const item = document.createElement('div');
+        item.className = 'peak-row';
+        item.innerHTML = `
+        <span class="peak-rank">${i + 1}.</span>
+        <span class="peak-name">${row.name}</span>
+        <span class="peak-value">${row.peak.toLocaleString()}</span>
+        `;
+        table.appendChild(item);
     });
+
+    wrapper.appendChild(table);
   }
 
   // 2) Releases over time (year) - line
@@ -275,7 +283,6 @@ const API_BASE = "http://localhost:5000/api";
     });
   }
 
-  // initial render
   renderTab();
 
 })();
