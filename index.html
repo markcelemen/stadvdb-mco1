@@ -8,12 +8,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Updated Library Imports -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.5.0/umd/Recharts.min.js"></script>
+
+    {/* Libraries with defer attribute */}
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" defer></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" defer></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
+    <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js" defer></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -25,242 +27,468 @@
             border: 1px solid #30363d;
             border-radius: 8px;
             padding: 24px;
+            margin-bottom: 24px;
         }
         .recharts-tooltip-wrapper {
             background-color: #161b22 !important;
             border: 1px solid #30363d !important;
             border-radius: 6px !important;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 8px !important;
+        }
+        .recharts-tooltip-label {
+             font-weight: bold;
+             color: #c9d1d9 !important;
+             margin-bottom: 4px;
+        }
+        .recharts-tooltip-item {
+             color: #8b949e !important;
+             font-size: 0.75rem; /* Smaller tooltip text */
         }
         .recharts-text {
             fill: #8b949e;
         }
+        .recharts-cartesian-axis-tick-value {
+             font-size: 0.75rem;
+        }
+        h1, h2 {
+            color: #f0f6fc;
+        }
+        select, button {
+            background-color: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-right: 8px;
+            font-size: 0.875rem; /* Slightly smaller controls */
+        }
+         button:hover {
+            background-color: #30363d;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #21262d; /* Keep background consistent */
+        }
+
     </style>
 </head>
 <body>
     <div id="root"></div>
 
+    {/* Babel script - No defer needed here, it relies on the libraries already being loaded */}
     <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label, Text } = Recharts;
+        // NO DOMContentLoaded listener needed when using defer on head scripts
+        // document.addEventListener('DOMContentLoaded', () => { ... });
 
-        // Custom Tooltip for Charts
-        const CustomTooltip = ({ active, payload, label }) => {
+        console.log("Starting React script (expecting libraries to be loaded via defer)."); // <-- UPDATED LOG
+
+        // Check if libraries loaded (crucial check)
+        if (typeof window.React === 'undefined' || typeof window.ReactDOM === 'undefined') {
+            console.error("React or ReactDOM library failed to load!");
+            document.getElementById('root').innerHTML = '<h1 style="color:red;">Error: React failed to load. Check console.</h1>';
+            // Stop execution if core libraries are missing
+            throw new Error("React/ReactDOM not loaded");
+        }
+        if (typeof window.PropTypes === 'undefined') {
+             console.warn("PropTypes library potentially failed to load! Recharts might have issues.");
+        }
+        if (typeof window.Recharts === 'undefined') {
+            console.error("Recharts library failed to load!");
+            document.getElementById('root').innerHTML = '<h1 style="color:red;">Error: Charting library failed to load. Check console.</h1>';
+            // Stop execution if Recharts is missing
+            throw new Error("Recharts not loaded");
+        }
+         console.log("React, ReactDOM, Recharts confirmed loaded."); // <-- Keep LOG
+
+        const { useState, useEffect, useCallback } = React;
+        const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Label, Text } = window.Recharts;
+
+        // --- Custom Tooltip component ---
+         const CustomTooltip = ({ active, payload, label }) => {
+            // ... (keep your existing CustomTooltip code)
             if (active && payload && payload.length) {
                 return (
-                    <div className="p-2 bg-[#0d1117] border border-gray-700 rounded-md shadow-lg">
-                        <p className="label text-sm text-white">{`${label}`}</p>
+                    <div className="recharts-tooltip-wrapper">
+                        <p className="recharts-tooltip-label">{`${label}`}</p>
                         {payload.map((pld, index) => (
-                            <p key={index} style={{ color: pld.color }} className="text-xs">{`${pld.name}: ${pld.value.toLocaleString()}`}</p>
+                            <p key={index} style={{ color: pld.color }} className="recharts-tooltip-item text-xs">{`${pld.name}: ${typeof pld.value === 'number' ? pld.value.toLocaleString() : pld.value}`}</p>
                         ))}
                     </div>
                 );
             }
             return null;
         };
-        
+
+        // --- Report Components ---
         // Report 1: Most Played Games (Bar Chart)
         function MostPlayed() {
             const [data, setData] = useState([]);
+            const [year, setYear] = useState('');
+            const [years, setYears] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
 
             useEffect(() => {
-                fetch("http://localhost:5000/api/most-played")
-                    .then(res => res.json())
-                    .then(rawData => {
-                        const filteredData = rawData.filter(item => item && item.Name && item.PeakCCU != null);
-                        setData(filteredData);
-                    })
-                    .catch(error => console.error('Error fetching most played:', error));
+                fetch("http://localhost:5000/api/years")
+                    .then(res => { if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`); return res.json(); })
+                    .then(data => setYears(data.map(item => item.ReleaseYear).sort((a,b) => b-a)))
+                    .catch(error => { console.error('Error fetching years:', error); setError('Could not load years.'); });
             }, []);
+
+            useEffect(() => {
+                const url = year ? `http://localhost:5000/api/most-played?year=${year}` : "http://localhost:5000/api/most-played";
+                setLoading(true); setError(null);
+                console.log(`MostPlayed: Fetching from ${url}`);
+                fetch(url)
+                    .then(res => { if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`); return res.json(); })
+                    .then(rawData => {
+                        console.log("MostPlayed: Raw data received", rawData ? rawData.length : 0);
+                        const filteredData = (rawData || []).filter(item => item && item.AppName && item.Peak_CCU != null && item.Peak_CCU > 0);
+                        setData(filteredData.sort((a, b) => b.Peak_CCU - a.Peak_CCU).slice(0, 10));
+                        setLoading(false);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching most played:', error);
+                        setError(`Failed to load data: ${error.message}`); setData([]); setLoading(false);
+                    });
+            }, [year]);
 
             return (
                 <div className="chart-container">
-                    <h2 className="text-xl font-bold mb-4 text-white">Most Played Games by Peak Concurrent Users</h2>
-                    <ResponsiveContainer width="100%" height={350}>
-                        <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
-                            <XAxis type="number" stroke="#8b949e" />
-                            <YAxis type="category" dataKey="Name" stroke="#8b949e" width={150} tick={{ fontSize: 12 }} />
-                            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(136, 132, 216, 0.1)' }} />
-                            <Bar dataKey="PeakCCU" name="Peak Users" fill="#8884d8" />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
+                        <h2 className="text-xl font-bold text-white">Most Played Games by Peak Concurrent Users {year && `(${year})`}</h2>
+                        <div>
+                            <label htmlFor="year-select" className="mr-2 text-sm text-gray-400">Slice by Year:</label>
+                            <select id="year-select" value={year} onChange={(e) => setYear(e.target.value)} className="bg-gray-700 border border-gray-600 text-white text-sm rounded focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Years</option>
+                                {years.map(y => <option key={y} value={y}>{y}</option>)}
+                            </select>
+                         </div>
+                    </div>
+                     {loading && <p className="text-center text-gray-400">Loading...</p>}
+                     {error && <p className="text-center text-red-500">{error}</p>}
+                     {!loading && !error && data.length === 0 && <p className="text-center text-gray-500">No data available for this selection.</p>}
+                     {!loading && !error && data.length > 0 && (
+                        <ResponsiveContainer width="100%" height={350}>
+                            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 180, bottom: 5 }}>
+                                 <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+                                <XAxis type="number" stroke="#8b949e" />
+                                <YAxis type="category" dataKey="AppName" stroke="#8b949e" width={180} tick={{ fontSize: 10, fill: '#c9d1d9' }} interval={0} />
+                                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(136, 132, 216, 0.1)' }} />
+                                <Bar dataKey="Peak_CCU" name="Peak Users" fill="#8884d8" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             );
         }
 
-        // Report 2: Trending Games (Line Chart)
-        function TrendingGames() {
+        // Report 2: Games Released Over Time (Line Chart - Rollup/Drilldown)
+        function ReleaseTrends() {
             const [data, setData] = useState([]);
+            const [granularity, setGranularity] = useState('year');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
 
-            useEffect(() => {
-                fetch("http://localhost:5000/api/trending?limit=50")
-                    .then(res => res.json())
+            const fetchData = useCallback(() => {
+                const url = `http://localhost:5000/api/release-trends?granularity=${granularity}`;
+                setLoading(true); setError(null);
+                console.log(`ReleaseTrends: Fetching from ${url}`);
+                fetch(url)
+                     .then(res => { if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`); return res.json(); })
                     .then(rawData => {
-                         const filteredData = rawData
-                            .filter(item => item && item.Name && item.ReleaseYear && item.ReleaseMonth && item.ReleaseDay)
-                            .map(item => ({...item, date: `${item.ReleaseYear}-${String(item.ReleaseMonth).padStart(2, '0')}-${String(item.ReleaseDay).padStart(2, '0')}`}))
-                            .sort((a, b) => new Date(b.date) - new Date(a.date))
-                            .slice(0, 15);
-                        setData(filteredData.reverse()); // reverse for chronological line chart
+                        console.log("ReleaseTrends: Raw data received", rawData ? rawData.length : 0);
+                        const sortedData = (rawData || []).sort((a, b) => {
+                            if (granularity === 'year') return (a.year || 0) - (b.year || 0);
+                            return (a.date || '').localeCompare(b.date || '');
+                         });
+                        setData(sortedData); setLoading(false);
                     })
-                    .catch(error => console.error('Error fetching trending games:', error));
-            }, []);
+                    .catch(error => {
+                        console.error('Error fetching release trends:', error);
+                        setError(`Failed to load data: ${error.message}`); setData([]); setLoading(false);
+                    });
+            }, [granularity]);
+
+            useEffect(() => { fetchData(); }, [fetchData]);
+
+            const handleRollUp = () => { if (granularity === 'day') setGranularity('month'); else if (granularity === 'month') setGranularity('year'); };
+            const handleDrillDown = () => { if (granularity === 'year') setGranularity('month'); else if (granularity === 'month') setGranularity('day'); };
+            const dateKey = granularity === 'year' ? 'year' : 'date';
+
+            const formatXAxis = (tickItem) => {
+                if (!tickItem) return ''; // Handle potential null/undefined ticks
+                try {
+                    if (granularity === 'month' && tickItem.includes('-')) {
+                        const [year, month] = tickItem.split('-');
+                        const date = new Date(parseInt(year), parseInt(month) - 1);
+                        return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
+                    }
+                    if (granularity === 'day' && tickItem.includes('-')) {
+                         const date = new Date(tickItem);
+                         // Add timezone offset to avoid potential day shifts
+                         const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+                         return adjustedDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                    }
+                } catch(e) { console.error("Error formatting date tick:", tickItem, e); return tickItem; } // Log error and return original
+                return tickItem;
+            };
 
             return (
                 <div className="chart-container">
-                    <h2 className="text-xl font-bold mb-4 text-white">Top 15 Most Recent Releases</h2>
-                     <ResponsiveContainer width="100%" height={350}>
-                        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 80 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-                            <XAxis dataKey="Name" stroke="#8b949e" angle={-45} textAnchor="end" interval={0} tick={{ fontSize: 10 }} />
-                            <YAxis stroke="#8b949e" />
-                            <Tooltip content={<CustomTooltip />} />
-                             <Line type="monotone" dataKey="ReleaseYear" name="Release Year" stroke="#8884d8" activeDot={{ r: 8 }} />
-                        </LineChart>
-                    </ResponsiveContainer>
+                     <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
+                        <h2 className="text-xl font-bold text-white">Game Releases Over Time ({granularity})</h2>
+                        <div>
+                             <button onClick={handleRollUp} disabled={granularity === 'year'} className="disabled:opacity-50 disabled:cursor-not-allowed"> Roll Up ▲ </button>
+                             <button onClick={handleDrillDown} disabled={granularity === 'day'} className="disabled:opacity-50 disabled:cursor-not-allowed"> Drill Down ▼ </button>
+                        </div>
+                    </div>
+                    {loading && <p className="text-center text-gray-400">Loading...</p>}
+                    {error && <p className="text-center text-red-500">{error}</p>}
+                    {!loading && !error && data.length === 0 && <p className="text-center text-gray-500">No data available.</p>}
+                    {!loading && !error && data.length > 0 && (
+                        <ResponsiveContainer width="100%" height={350}>
+                            <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 40 }}> {/* Increased bottom margin for angled labels */}
+                                 <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+                                 <XAxis dataKey={dateKey} stroke="#8b949e" tick={{ fontSize: 10 }} tickFormatter={formatXAxis} angle={-30} textAnchor="end" interval="preserveStartEnd" height={50} dy={10} /> {/* Added height and dy */}
+                                 <YAxis stroke="#8b949e" label={{ value: 'Number of Games', angle: -90, position: 'insideLeft', fill: '#8b949e' }} />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend verticalAlign="top" height={36}/>
+                                 <Line type="monotone" dataKey="count" name="Games Released" stroke="#82ca9d" dot={false} activeDot={{ r: 6 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             );
         }
-        
+
         // Report 3: Platform Breakdown (Pie Chart)
         function PlatformBreakdown() {
             const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
             const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
             useEffect(() => {
-                fetch("http://localhost:5000/api/platforms-breakdown")
-                    .then(res => res.json())
+                const url = "http://localhost:5000/api/platforms-breakdown";
+                setLoading(true); setError(null);
+                console.log(`PlatformBreakdown: Fetching from ${url}`);
+                fetch(url)
+                    .then(res => { if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`); return res.json(); })
                     .then(rawData => {
-                        const filteredData = rawData.filter(item => item && item.name && item.value != null);
-                        setData(filteredData);
+                        console.log("PlatformBreakdown: Raw data received", rawData);
+                        const formattedData = ['Windows', 'Mac', 'Linux'].map(platform => ({
+                            name: platform,
+                            value: (rawData || []).find(item => item.platform === platform)?.count || 0
+                        })).filter(item => item.value > 0);
+                        setData(formattedData); setLoading(false);
                     })
-                    .catch(error => console.error('Error fetching platforms:', error));
+                    .catch(error => {
+                        console.error('Error fetching platforms:', error);
+                        setError(`Failed to load data: ${error.message}`); setData([]); setLoading(false);
+                    });
             }, []);
+
+            const RADIAN = Math.PI / 180;
+            const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }) => {
+                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                if (percent < 0.03) return null;
+                return ( <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={10}> {`${name} ${(percent * 100).toFixed(0)}%`} </text> );
+            };
 
             return (
                 <div className="chart-container">
                     <h2 className="text-lg font-bold mb-4 text-white">Platform Distribution</h2>
-                    <ResponsiveContainer width="100%" height={250}>
-                        <PieChart>
-                            <Pie
-                                data={data}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                                nameKey="name"
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                            >
-                                {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                            </Pie>
-                            <Tooltip content={<CustomTooltip />}/>
-                        </PieChart>
-                    </ResponsiveContainer>
+                    {loading && <p className="text-center text-gray-400">Loading...</p>}
+                    {error && <p className="text-center text-red-500">{error}</p>}
+                    {!loading && !error && data.length === 0 && <p className="text-center text-gray-500">No data available.</p>}
+                    {!loading && !error && data.length > 0 && (
+                        <ResponsiveContainer width="100%" height={250}>
+                            <PieChart>
+                                <Pie data={data} cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={80} fill="#8884d8" dataKey="value" nameKey="name">
+                                    {data.map((entry, index) => ( <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} /> ))}
+                                </Pie>
+                                <Tooltip content={<CustomTooltip />}/>
+                                <Legend verticalAlign="bottom" height={36}/>
+                            </PieChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             );
         }
 
-        // Report 4 & 5: Top Rated & Price vs Rating (Bubble Charts)
-        function RatingBubbleChart({ endpoint, title, xKey, yKey, zKey, xName, yName, zName }) {
+        // Report 4: Top Rated Games (Scatter Chart)
+         function TopRatedGames() {
+             const [data, setData] = useState([]);
+             const [loading, setLoading] = useState(false);
+             const [error, setError] = useState(null);
+
+             useEffect(() => {
+                 const url = `http://localhost:5000/api/top-rated`;
+                 setLoading(true); setError(null);
+                 console.log(`TopRatedGames: Fetching from ${url}`);
+                 fetch(url)
+                     .then(res => { if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`); return res.json(); })
+                     .then(rawData => {
+                         console.log("TopRatedGames: Raw data received", rawData ? rawData.length : 0);
+                         const filteredData = (rawData || []).filter(d => d && d.Metacritic_Score != null && d.Metacritic_Score >= 0 && d.User_Score != null && d.User_Score >= 0 && d.TotalReviews != null );
+                         filteredData.sort((a, b) => b.Metacritic_Score - a.Metacritic_Score || b.User_Score - a.User_Score);
+                         setData(filteredData.slice(0, 50)); setLoading(false);
+                     })
+                     .catch(error => {
+                         console.error(`Error fetching Top Rated Games:`, error);
+                         setError(`Failed to load data: ${error.message}`); setData([]); setLoading(false);
+                     });
+             }, []);
+
+             return (
+                 <div className="chart-container">
+                     <h2 className="text-lg font-bold mb-4 text-white">Top Rated Games (Metacritic vs. User Score)</h2>
+                     {loading && <p className="text-center text-gray-400">Loading...</p>}
+                     {error && <p className="text-center text-red-500">{error}</p>}
+                     {!loading && !error && data.length === 0 && <p className="text-center text-gray-500">No data available.</p>}
+                     {!loading && !error && data.length > 0 && (
+                         <ResponsiveContainer width="100%" height={300}>
+                              <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 20 }}>
+                                 <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+                                 <XAxis type="number" dataKey="Metacritic_Score" name="Metacritic Score" stroke="#8b949e" domain={[0, 100]} label={{ value: 'Metacritic Score', position: 'insideBottom', offset: -10, fill: '#8b949e' }} />
+                                  <YAxis type="number" dataKey="User_Score" name="User Score" stroke="#8b949e" domain={[0, 10]} label={{ value: 'User Score', angle: -90, position: 'insideLeft', fill: '#8b949e' }} />
+                                  <ZAxis type="number" dataKey="TotalReviews" name="Total Reviews" range={[20, 500]} />
+                                 <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
+                                 <Scatter name="Games" data={data} fill="#8884d8" />
+                             </ScatterChart>
+                         </ResponsiveContainer>
+                     )}
+                 </div>
+             );
+         }
+
+
+        // Report 5: Price vs Rating (Scatter Chart)
+        function PriceVsRatingChart() {
             const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState(null);
 
             useEffect(() => {
-                fetch(`http://localhost:5000/api/${endpoint}`)
-                    .then(res => res.json())
+                const url = `http://localhost:5000/api/price-vs-rating`;
+                 setLoading(true); setError(null);
+                 console.log(`PriceVsRatingChart: Fetching from ${url}`);
+                fetch(url)
+                     .then(res => { if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`); return res.json(); })
                     .then(rawData => {
-                        const filteredData = rawData.filter(d => d && d[xKey] != null && d[yKey] != null && d[zKey] != null);
-                        setData(filteredData);
+                         console.log("PriceVsRatingChart: Raw data received", rawData ? rawData.length : 0);
+                        const filteredData = (rawData || []).filter(d => d && d.Launch_Price != null && d.Launch_Price >= 0 && d.User_Score != null && d.User_Score >= 0 && d.TotalReviews != null);
+                        setData(filteredData.slice(0, 100)); setLoading(false);
                     })
-                    .catch(error => console.error(`Error fetching ${title}:`, error));
-            }, [endpoint]);
-
-            return (
-                <div className="chart-container">
-                    <h2 className="text-lg font-bold mb-4 text-white">{title}</h2>
-                    <ResponsiveContainer width="100%" height={250}>
-                        <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
-                            <XAxis type="number" dataKey={xKey} name={xName} stroke="#8b949e" />
-                            <YAxis type="number" dataKey={yKey} name={yName} stroke="#8b949e" />
-                            <ZAxis type="number" dataKey={zKey} name={zName} range={[20, 500]} />
-                            <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
-                            <Scatter name="Games" data={data} fill="#8884d8" />
-                        </ScatterChart>
-                    </ResponsiveContainer>
-                </div>
-            );
-        }
-
-        // Main App Component
-        function App() {
-            const [backendStatus, setBackendStatus] = useState('Connecting...');
-
-            useEffect(() => {
-                fetch('http://localhost:5000/')
-                    .then(res => {
-                        if (res.ok) {
-                            setBackendStatus('Connected');
-                        } else {
-                            setBackendStatus('Error');
-                        }
-                    })
-                    .catch(() => setBackendStatus('Failed to Connect'));
+                    .catch(error => {
+                        console.error(`Error fetching Price vs Rating:`, error);
+                        setError(`Failed to load data: ${error.message}`); setData([]); setLoading(false);
+                    });
             }, []);
 
             return (
-                <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-                    <header className="flex justify-between items-center mb-6">
-                        <h1 className="text-3xl font-black tracking-tighter text-white">
-                            DIMGAME <span className="text-gray-500">Analytics</span>
-                        </h1>
-                         <div className="flex items-center space-x-2">
-                            <span className={`h-3 w-3 rounded-full ${
-                                backendStatus === 'Connected' ? 'bg-green-500' :
-                                backendStatus === 'Connecting...' ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}></span>
-                            <span className="text-sm text-gray-400">{backendStatus === 'Connected' ? 'Backend Connected' : backendStatus}</span>
-                        </div>
-                    </header>
-                    
-                    <main className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Main Reports */}
-                        <div className="lg:col-span-2">
-                            <MostPlayed />
-                        </div>
-                        <div className="lg:col-span-2">
-                            <TrendingGames />
-                        </div>
-
-                        {/* Secondary Reports */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:col-span-2">
-                            <div className="md:col-span-1">
-                                <PlatformBreakdown />
-                            </div>
-                            <div className="md:col-span-2">
-                                 <RatingBubbleChart 
-                                    endpoint="top-rated"
-                                    title="Top Rated Games (Metacritic vs. User Score)"
-                                    xKey="MetacriticScore" yKey="UserScore" zKey="Reviews"
-                                    xName="Metacritic" yName="User Score" zName="Total Reviews"
-                                />
-                            </div>
-                        </div>
-
-                         <div className="lg:col-span-2">
-                             <RatingBubbleChart
-                                endpoint="price-vs-rating"
-                                title="Price vs. User Score (Bubble Size = Reviews)"
-                                xKey="Price" yKey="UserScore" zKey="Reviews"
-                                xName="Price ($)" yName="User Score" zName="Total Reviews"
-                            />
-                        </div>
-                    </main>
+                <div className="chart-container">
+                    <h2 className="text-lg font-bold mb-4 text-white">Price vs. User Score (Bubble Size = Reviews)</h2>
+                    {loading && <p className="text-center text-gray-400">Loading...</p>}
+                    {error && <p className="text-center text-red-500">{error}</p>}
+                    {!loading && !error && data.length === 0 && <p className="text-center text-gray-500">No data available.</p>}
+                    {!loading && !error && data.length > 0 && (
+                        <ResponsiveContainer width="100%" height={300}>
+                             <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
+                                 <XAxis type="number" dataKey="Launch_Price" name="Price ($)" stroke="#8b949e" label={{ value: 'Launch Price ($)', position: 'insideBottom', offset: -10, fill: '#8b949e' }} tickFormatter={(value) => `$${value.toFixed(2)}`} />
+                                 <YAxis type="number" dataKey="User_Score" name="User Score" stroke="#8b949e" domain={[0, 10]} label={{ value: 'User Score', angle: -90, position: 'insideLeft', fill: '#8b949e' }} />
+                                 <ZAxis type="number" dataKey="TotalReviews" name="Total Reviews" range={[20, 500]} />
+                                <Tooltip cursor={{ strokeDasharray: '3 3' }} content={<CustomTooltip />} />
+                                 <Scatter name="Games" data={data} fill="#82ca9d" />
+                            </ScatterChart>
+                        </ResponsiveContainer>
+                     )}
                 </div>
             );
         }
 
-        ReactDOM.render(<App />, document.getElementById('root'));
+        // --- Main App Component ---
+        function App() {
+            console.log("Rendering App component");
+            const [backendStatus, setBackendStatus] = useState('Connecting...');
+
+            useEffect(() => {
+                console.log("App component mounted. Checking backend status.");
+                fetch('http://localhost:5000/api/')
+                    .then(res => {
+                        if (res.ok) {
+                            console.log("Backend connection OK");
+                            setBackendStatus('Connected');
+                        } else {
+                            throw new Error(`Backend status check failed: ${res.status}`);
+                        }
+                    })
+                    .catch((error) => {
+                         console.error("Backend connection error:", error);
+                         setBackendStatus(`Connection Error: ${error.message}`);
+                    });
+            }, []);
+
+
+            return (
+                 <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+                     <header className="flex flex-wrap justify-between items-center mb-6 border-b border-gray-700 pb-4 gap-2">
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-white">
+                            DIMGAME <span className="text-gray-500">Analytics</span> 📊
+                        </h1>
+                         <div className="flex items-center space-x-2">
+                             <span className={`h-3 w-3 rounded-full flex-shrink-0 ${
+                                backendStatus === 'Connected' ? 'bg-green-500 animate-pulse' :
+                                backendStatus === 'Connecting...' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
+                             }`}></span>
+                             <span className="text-xs sm:text-sm text-gray-400">{backendStatus}</span>
+                         </div>
+                    </header>
+
+                     <main className="grid grid-cols-1 gap-6">
+                        <MostPlayed />
+                        <ReleaseTrends />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="md:col-span-1"> <PlatformBreakdown /> </div>
+                            <div className="md:col-span-2"> <TopRatedGames/> </div>
+                        </div>
+                        <PriceVsRatingChart/>
+                    </main>
+
+                     <footer className="mt-8 text-center text-xs text-gray-500">
+                        Analytics dashboard generated {new Date().toLocaleDateString()}. Data processed via STADVDB-MCO1 project.
+                    </footer>
+                 </div>
+            );
+        }
+
+        // --- Rendering logic ---
+        try {
+            const container = document.getElementById('root');
+            if (!container) {
+                 console.error("Root element '#root' not found!");
+                 throw new Error("Root element '#root' not found!"); // Also throw to stop
+            }
+            const root = ReactDOM.createRoot(container);
+            console.log("Rendering React App into #root...");
+            root.render(<App />);
+            console.log("React App render initiated.");
+        } catch (e) {
+            console.error("Error during React setup or initial render:", e); // Changed error message
+             // Display error on page if rendering fails
+             const rootEl = document.getElementById('root');
+             if(rootEl) {
+                rootEl.innerHTML = `<div style="color: red; padding: 20px;"><h1>Application Error</h1><p>${e.message}. Check the console for more details.</p></div>`;
+             }
+        }
+
+        // Removed the DOMContentLoaded listener wrapper as defer should handle execution order
     </script>
 </body>
 </html>

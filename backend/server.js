@@ -20,7 +20,7 @@ app.get('/api/most-played', async (req, res) => {
     const sql = `
         SELECT g.AppName AS Name,
                p.Peak_CCU AS PeakCCU,
-               p.AveragePlaytimeForever AS AveragePlaytime
+               p.AvgPlaytimeForever AS AveragePlaytime
         FROM Games g
         JOIN Playtime p ON g.PlaytimeID = p.PlaytimeID
         ORDER BY p.Peak_CCU DESC
