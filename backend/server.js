@@ -144,7 +144,7 @@ app.get('/api/top-rated', async (req, res) => {
 });
 
 // Report 4: Price vs Rating Analysis (/api/price-vs-rating)
-// Metrics: Price, User Score, Reviews (for bubble size)
+// Metrics: Price, Metacritic Score, Reviews (for bubble size)
 // Visualization: Bubble chart (data source)
 app.get('/api/price-vs-rating', async (req, res) => {
      console.log(`GET /api/price-vs-rating`);
@@ -153,12 +153,12 @@ app.get('/api/price-vs-rating', async (req, res) => {
             SELECT
                 g.AppName,
                 s.Launch_Price,
-                r.User_Score,
+                r.Metacritic_Score,
                 (r.Positive + r.Negative) AS TotalReviews -- For bubble size
             FROM Sales s
             JOIN Games g ON s.SalesID = g.SalesID
             JOIN Reviews r ON g.ReviewsID = r.ReviewsID
-            WHERE s.Launch_Price > 0 AND r.User_Score > 0 -- Filter out free games or those without user score
+            WHERE s.Launch_Price > 0 AND r.Metacritic_Score > 0 -- Filter out free games or those without user score
               AND (r.Positive + r.Negative) > 10 -- Require some reviews for bubble size
             LIMIT 150; -- Limit results for performance
         `);
