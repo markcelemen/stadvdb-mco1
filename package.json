@@ -1,0 +1,31 @@
+{
+  "name": "stadvdb-mco1",
+  "version": "1.0.0",
+  "description": "Use Python 3.11.9 environment to run etl_steamdata. Install needed libraries.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "mysql2": "^3.15.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "olap-cube": "^1.0.0",
+    "react-router-dom": "^7.9.4",
+    "recharts": "^3.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/markcelemen/stadvdb-mco1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/markcelemen/stadvdb-mco1/issues"
+  },
+  "homepage": "https://github.com/markcelemen/stadvdb-mco1#readme"
+}
