@@ -185,9 +185,13 @@ The application requires two separate terminals running simultaneously.
       ```bash
       cd /path/to/your/project/stadvdb-mco1
       ```
-    - Run this command to start a simple web server for the `index.html` file:
+    - Run this command to start a simple web server for the `index.html` file for MacOS:
       ```bash
       python3 -m http.server 8000
+      ```
+      - Run this command to start a simple web server for the `index.html` file for MacOS:
+      ```bash
+      python -m http.server 8000
       ```
       _(Explicitly using port 8000)_
     - **Keep this terminal running.**

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Steam Analytics Dashboard</title>
+
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    body { margin: 0; background: #0f1113; color: #e6eef6; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    #root { max-width: 1200px; margin: 18px auto; padding: 12px; }
+    .tabs-container { position: sticky; top: 0; display:flex; gap:8px; padding:8px; background:#0b0c0e; border-bottom:1px solid #25282b; z-index:999; }
+    .tab-item { padding:8px 12px; border-radius:6px; background:#111214; cursor:pointer; color:#cbd5e1; border:1px solid #2a2d30; }
+    .tab-item.active { background:#0b84ff; color:white; font-weight:700; border-color:#0b84ff; }
+    .chart-wrapper { margin-top:14px; background:#0b0c0e; padding:14px; border-radius:8px; border:1px solid #222426; box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+    h2 { margin:0 0 12px 0; font-size:18px; color:#e6eef6; }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

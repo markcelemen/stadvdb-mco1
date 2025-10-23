@@ -10,7 +10,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-4">🎮 Steam Analytics Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-4">Report Dashboard</h1>
 
       {/* Report selector */}
       <select
