@@ -1,0 +1,144 @@
+:root {
+  --steam-dark: #171a21;
+  --steam-dark-light: #1b2838;
+  --steam-blue: #1a9fff;
+  --steam-blue-hover: #3bb5ff;
+  --text-light: #c7d5e0;
+  --text-medium: #8f98a0;
+  --card-bg: #2a475e;
+  --card-bg-hover: #324c63;
+  --border-light: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  background: var(--steam-dark-light);
+  color: var(--text-light);
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ----- HEADER ----- */
+
+.header {
+  height: 65px;
+  background: var(--steam-dark);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 25px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.logo {
+  font-size: 20px;
+  color: var(--steam-blue);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.nav button {
+  background: transparent;
+  color: var(--text-light);
+  border: none;
+  margin-left: 18px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.nav button:hover {
+  color: var(--steam-blue);
+}
+
+.content {
+  flex: 1;
+  padding: 20px 30px;
+  overflow-y: auto;
+}
+
+.content h1 {
+  margin-bottom: 15px;
+  color: white;
+}
+
+.chart-card {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--border-light);
+  transition: 0.25s;
+  width: 100%;
+  height: 460px;
+}
+
+.chart-card:hover {
+  background: var(--card-bg-hover);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3e4b59;
+  border-radius: 6px;
+}
+
+.dashboard-container {
+  padding: 20px;
+  background-color: #0e1114;
+  min-height: 100vh;
+  color: #fff;
+}
+
+.dashboard-title {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  gap: 20px;
+}
+
+.steam-tooltip {
+  background: #1b2838;
+  border: 1px solid #2a475e;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #c7d5e0;
+  border-radius: 4px;
+}
+
+.steam-tooltip .title {
+  font-weight: bold;
+  color: #66c0f4;
+  margin-bottom: 4px;
+}
+
+.chart-card {
+  background: #1b2838;
+  border: 1px solid #2a475e;
+  border-radius: 10px;
+  padding: 20px;
+  color: #c7d5e0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  margin-bottom: 30px;
+}
+
