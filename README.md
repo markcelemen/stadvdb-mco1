@@ -172,6 +172,11 @@ The application requires two separate terminals running simultaneously.
       ```
     - The terminal should display: `Server running on port 5000`.
     - **Keep this terminal running.** (If you get an `EADDRINUSE` error, see the [Troubleshooting Guide](#7-troubleshooting-guide)).
+    - To test connection, open your web browser and go to this address:
+      ```
+      http://localhost:5000/api/most-played
+      ```
+    - if it resulted to some arrays, therefore you're connected!
 
 2.  **Start the Frontend Server (Terminal 2)**
 
