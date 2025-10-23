@@ -20,7 +20,7 @@ app.get('/api/most-played', async (req, res) => {
     const sql = `
         SELECT g.AppName AS Name,
                p.Peak_CCU AS PeakCCU,
-               p.AveragePlaytimeForever AS AveragePlaytime
+               p.AvgPlaytimeForever AS AveragePlaytime
         FROM Games g
         JOIN Playtime p ON g.PlaytimeID = p.PlaytimeID
         ORDER BY p.Peak_CCU DESC
@@ -68,7 +68,7 @@ app.get('/api/top-rated', async (req, res) => {
              r.Positive + r.Negative AS Reviews
       FROM Games g
       JOIN Reviews r ON g.ReviewsID = r.ReviewsID
-      WHERE r.Metacritic_Score > 0 AND r.User_Score > 0
+      WHERE r.Metacritic_Score > 0
       ORDER BY r.User_Score DESC, r.Metacritic_Score DESC
       LIMIT ?;
     `;
