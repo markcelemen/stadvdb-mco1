@@ -4,7 +4,7 @@ This project is a full-stack web application that performs the following:
 
 1.  **ETL (Extract, Transform, Load):** A Python script (`etl_steamdata.ipynb`) fetches Steam datasets, cleans and transforms them, and loads the data into a MySQL database.
 2.  **Backend:** A Node.js server (`backend/server.js`) connects to the database and provides a REST API for the data.
-3.  **Frontend:** A single-page application (`index.html`) visualizes the data from the API in a series of charts and graphs.
+3.  **Frontend:** A single-page application (`frontend/index.html`) visualizes the data from the API in a series of charts and graphs.
 
 ---
 
@@ -32,6 +32,7 @@ Before you begin, ensure you have the following installed and **running** on you
 - **MySQL Workbench:** (Or another SQL client) for database management and initial setup.
 - **Git:** For cloning the repository (if applicable).
 - **VS Code:** (Or your preferred code editor).
+- **`serve`:** (Optional but recommended Node.js package for serving static files). Install via terminal: `sudo npm install -g serve`
 
 ---
 
@@ -47,7 +48,7 @@ This project requires a specific Python environment to run the data loading scri
     ```
 
 2.  **Set Local Python Version**
-    Navigate to your project's root directory in the terminal and set the version for this folder. Replace `/path/to/your/project/` with the actual path.
+    Navigate to your project's root directory (`stadvdb-mco1`) in the terminal and set the version for this folder.
 
     ```bash
     cd /path/to/your/project/stadvdb-mco1
@@ -124,7 +125,7 @@ This step creates the database and fills it with data.
       engine = create_engine('mysql+mysqlconnector://<your_user>:<your_password>@localhost/<dbname>')
       ```
     - Click the **"Run All"** button (`>>`) at the top of the notebook editor.
-    - Wait for the script to finish (it may take a few minutes). You must see the final success message in the output: `🎉 All tables successfully created and loaded into MySQL!`
+    - Wait for the script to finish (it may take a few minutes). You must see the final success message in the output: `🎉 All tables successfully created and loaded into MySQL!`.
 
 ---
 
@@ -154,8 +155,7 @@ This configures the Node.js server that will act as our API.
     ```bash
     npm install
     ```
-    _(If `package.json` is missing dependencies, you might need: `npm install dotenv express mysql2 cors`)_
-    _(Note: This project's `package.json` must include `"type": "module"` for `import` statements to work.)_
+    _(Note: This project's `package.json` must include `"type": "module"` for `import` statements to work.)_.
 
 ---
 
@@ -176,24 +176,28 @@ The application requires two separate terminals running simultaneously.
       ```
       http://localhost:5000/api/most-played
       ```
-    - if it resulted to some arrays, therefore you're connected!
+    - If it resulted to some arrays, therefore you're connected!.
 
 2.  **Start the Frontend Server (Terminal 2)**
 
     - Open a **second, new terminal**.
-    - Navigate to the **root project folder** (NOT the `backend` folder).
+    - Navigate to the **`frontend` project folder** (NOT the root or `backend` folder).
       ```bash
-      cd /path/to/your/project/stadvdb-mco1
+      cd /path/to/your/project/stadvdb-mco1/frontend
       ```
-    - Run this command to start a simple web server for the `index.html` file for MacOS:
+    - **Recommended Method (using `serve`):**
+      If you installed `serve` (see Prerequisites), run:
       ```bash
+      serve -l 8000 .
+      ```
+    - **Alternative Method (using Python):**
+      If you prefer Python's built-in server, run (make sure you are in the `frontend` directory):
+      ```bash
+      # On macOS/Linux:
       python3 -m http.server 8000
+      # On Windows:
+      # python -m http.server 8000
       ```
-      - Run this command to start a simple web server for the `index.html` file for MacOS:
-      ```bash
-      python -m http.server 8000
-      ```
-      _(Explicitly using port 8000)_
     - **Keep this terminal running.**
 
 3.  **View the Dashboard**
@@ -213,7 +217,7 @@ To shut down all parts of the application properly:
     - Go to the terminal where the backend (`npm start`) is running.
     - Press `Control + C`.
 2.  **Stop Frontend Server:**
-    - Go to the terminal where the frontend (`python3 -m http.server`) is running.
+    - Go to the terminal where the frontend server (`serve` or `python3 -m http.server`) is running.
     - Press `Control + C`.
 3.  **Stop MySQL Server (Optional):**
     - If you want to stop the database server itself (not always necessary), open a new terminal and use the appropriate command for your installation method:
@@ -242,17 +246,31 @@ To shut down all parts of the application properly:
     2.  Run `kill -9 <PID>` (replace `<PID>` with the actual number).
     3.  Try `npm start` again.
 
+- **Error:** `EACCES: permission denied, mkdir '/usr/local/lib/node_modules/...'` **(Frontend/npm install -g)**
+
+  - **Cause:** Installing npm packages globally (`-g`) requires administrator permissions.
+  - **Solution:** Use `sudo` before the command. For example:
+    ```bash
+    sudo npm install -g serve
+    ```
+  - You will be prompted for your Mac's password.
+
+- **Issue:** Browser shows a **directory listing** instead of the dashboard at `http://localhost:8000`.
+
+  - **Cause 1:** You started the frontend server from the wrong directory. The server needs to be started from the directory containing `index.html`, which is the `frontend` folder.
+  - **Solution 1:** Stop the frontend server (`Control + C`), navigate into the `frontend` directory (`cd frontend`), and start the server again (`serve -l 8000 .` or `python3 -m http.server 8000`).
+  - **Cause 2:** Browser cache is showing an old version.
+  - **Solution 2:** Perform a hard refresh in your browser (**Cmd + Shift + R** on Mac, **Ctrl + Shift + R** on Windows/Linux).
+
 - **Error:** `Cannot find module ... server.js` **(Backend)**
 
   - **Cause:** Node.js modules are not installed, or you are not in the correct (`backend`) directory.
-  - **Solution:** Make sure you are in the `backend` directory and run `npm install`. Verify `node_modules` folder exists.
+  - **Solution:** Make sure you are in the `backend` directory and run `npm install`. Verify `node_modules` folder exists inside `backend`.
 
 - **Error:** Connection refused / Cannot connect to database **(Python ETL or Backend)**
   - **Cause 1:** MySQL Server is not running.
   - **Solution 1:** Start your MySQL server using the commands in [Step 3.1](#3-database-and-etl-setup).
-  - **Cause 2:** Incorrect credentials in Python script (`create_engine`) or `.env` file.
+  - **Cause 2:** Incorrect credentials in Python script (`create_engine`) or `backend/.env` file.
   - **Solution 2:** Double-check `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_HOST` in both places. Ensure they match exactly.
   - **Cause 3:** Firewall blocking connection (less common for localhost).
   - **Solution 3:** Check system firewall settings.
-
-_(Add more common errors and solutions here as needed)_
