@@ -101,23 +101,22 @@ app.get('/api/sales-revenue', async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT
-        CASE
-          WHEN pl.Windows = 1 THEN 'Windows'
-          WHEN pl.Mac = 1 THEN 'Mac'
-          WHEN pl.Linux = 1 THEN 'Linux'
-          ELSE 'Other'
-        END AS Platform,
-        SUM(s.Launch_Price * s.Estimated_Owners) AS EstimatedRevenue,
-        COUNT(DISTINCT g.AppID) AS GameCount
+        SUM(CASE WHEN pl.Windows=1 AND s.Launch_Price>0 AND s.Estimated_Owners>0 THEN s.Launch_Price * s.Estimated_Owners ELSE 0 END) AS WindowsRevenue,
+        SUM(CASE WHEN pl.Mac=1    AND s.Launch_Price>0 AND s.Estimated_Owners>0 THEN s.Launch_Price * s.Estimated_Owners ELSE 0 END) AS MacRevenue,
+        SUM(CASE WHEN pl.Linux=1  AND s.Launch_Price>0 AND s.Estimated_Owners>0 THEN s.Launch_Price * s.Estimated_Owners ELSE 0 END) AS LinuxRevenue
       FROM Games g
       JOIN Sales s ON g.SalesID = s.SalesID
-      JOIN Platforms pl ON g.PlatformsID = pl.PlatformsID
-      WHERE s.Launch_Price IS NOT NULL AND s.Estimated_Owners IS NOT NULL
-      GROUP BY Platform
-      ORDER BY EstimatedRevenue DESC;
+      JOIN Platforms pl ON g.PlatformsID = pl.PlatformsID;
     `);
 
-    res.json(rows);
+    const sums = (rows && rows[0]) ? rows[0] : {};
+    const response = [
+      { Platform: 'Windows', EstimatedRevenue: Number(sums.WindowsRevenue) || 0 },
+      { Platform: 'Mac',     EstimatedRevenue: Number(sums.MacRevenue) || 0 },
+      { Platform: 'Linux',   EstimatedRevenue: Number(sums.LinuxRevenue) || 0 }
+    ];
+
+    res.json(response);
   } catch (err) {
     console.error('Error fetching sales revenue:', err);
     res.status(500).json({ error: 'Failed to fetch sales revenue', details: err.message });
