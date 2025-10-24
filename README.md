@@ -1,5 +1,7 @@
 # Steam Analytics Dashboard (stadvdb-mco1)
 
+![Dashboard Snapshot](dashboard.png)  
+
 This project is a full-stack web application that performs the following:
 
 1.  **ETL (Extract, Transform, Load):** A Python script (`etl_steamdata.ipynb`) fetches Steam datasets, cleans and transforms them, and loads the data into a MySQL database.
@@ -274,3 +276,4 @@ To shut down all parts of the application properly:
   - **Solution 2:** Double-check `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_HOST` in both places. Ensure they match exactly.
   - **Cause 3:** Firewall blocking connection (less common for localhost).
   - **Solution 3:** Check system firewall settings.
+
