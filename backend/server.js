@@ -3,6 +3,32 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import pool from './db.js'; 
 
+import cron from "node-cron";
+import { exec } from "child_process";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// Fix path issues with ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Schedule job to run every day at 12:00 AM
+cron.schedule("0 0 * * *", () => {
+  console.log("Running ETL notebook…");
+
+  const notebookPath = path.join(__dirname, "../etl_steamdata.ipynb");
+  const outputPath = path.join(__dirname, "../etl_output.ipynb");
+
+  exec(`papermill "${notebookPath}" "${outputPath}"`, (err, stdout, stderr) => {
+    if (err) {
+      console.error("Error running notebook:", err);
+      return;
+    }
+    console.log("Notebook ETL completed successfully.");
+    console.log(stdout);
+  });
+});
+
 dotenv.config();
 
 const app = express();
