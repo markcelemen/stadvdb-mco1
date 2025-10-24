@@ -25,9 +25,9 @@ CREATE TABLE Platforms(
 CREATE TABLE Reviews(
     ReviewsID int,
     Metacritic_Score int,
-    User_Score int,
-    Positive int,
-    Negative int,
+	User_Score int,
+	Positive int,
+	Negative int,
     PRIMARY KEY (ReviewsID)
 );
 

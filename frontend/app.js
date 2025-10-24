@@ -1,10 +1,16 @@
 const API_BASE = "http://localhost:5000/api";
 
-(function () {
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from((root || document).querySelectorAll(sel));
+function getPlatformColor(platform) {
+  switch(platform) {
+    case 'Windows': return 'rgba(54,162,235,0.7)';
+    case 'Mac': return 'rgba(255,99,132,0.7)';
+    case 'Linux': return 'rgba(75,192,192,0.7)';
+    default: return 'rgba(201,203,207,0.7)';
+  }
+}
 
-  const root = document.getElementById('root') || (function () {
+(function () {
+  const root = document.getElementById('root') || (() => {
     const r = document.createElement('div');
     r.id = 'root';
     document.body.appendChild(r);
@@ -12,66 +18,37 @@ const API_BASE = "http://localhost:5000/api";
   })();
 
   const tabs = [
-    { id: 'peak', label: 'Peak Users', endpoint: `${API_BASE}/most-played` },
-    { id: 'releases', label: 'Releases', endpoint: `${API_BASE}/release-trends?granularity=year` },
-    { id: 'platforms', label: 'Platforms', endpoint: `${API_BASE}/platforms-breakdown` },
-    { id: 'ratings', label: 'Top Rated', endpoint: `${API_BASE}/top-rated` },
-    { id: 'priceScore', label: 'Price vs Rating', endpoint: `${API_BASE}/price-vs-rating` },
+    { id: 'mostPlayed', label: 'Most Played', endpoint: `${API_BASE}/most-played` },
+    { id: 'trending', label: 'Trending Releases', endpoint: `${API_BASE}/trending-games` },
+    { id: 'sales', label: 'Sales Revenue', endpoint: `${API_BASE}/sales-revenue` },
+    { id: 'priceRating', label: 'Price vs Rating', endpoint: `${API_BASE}/price-vs-rating` },
+    { id: 'platforms', label: 'Platforms Breakdown', endpoint: `${API_BASE}/platforms-breakdown` },
   ];
 
-  const cache = {};
-  tabs.forEach(t => cache[t.id] = { loading: false, data: null, error: null });
 
-  let currentChart = null;
   let currentTab = tabs[0].id;
+  let currentChart = null;
 
   const tabsContainer = document.createElement('div');
-  tabsContainer.className = 'tabs-container';
+  tabsContainer.style.marginBottom = '12px';
   tabs.forEach(t => {
-    const el = document.createElement('div');
-    el.className = `tab-item ${t.id === currentTab ? 'active' : ''}`;
-    el.textContent = t.label;
-    el.dataset.tab = t.id;
-    el.addEventListener('click', () => activateTab(t.id));
-    el.addEventListener('keypress', (e) => { if (e.key === 'Enter') activateTab(t.id); });
-    el.addEventListener('dblclick', () => forceRefresh(t.id));
-    tabsContainer.appendChild(el);
+    const btn = document.createElement('button');
+    btn.textContent = t.label;
+    btn.style.marginRight = '8px';
+    btn.dataset.tab = t.id;
+    btn.addEventListener('click', () => activateTab(t.id));
+    tabsContainer.appendChild(btn);
   });
 
   const content = document.createElement('div');
-  content.style.padding = '12px';
-
-  const statusEl = document.createElement('div');
-  statusEl.style.padding = '8px 0';
-  statusEl.style.color = '#9aa4b2';
-
-  const chartWrapper = document.createElement('div');
-  chartWrapper.className = 'chart-wrapper';
-  chartWrapper.style.minHeight = '420px';
-
-  const title = document.createElement('h2');
-  title.textContent = '';
-
   const canvas = document.createElement('canvas');
-  canvas.id = 'reportChart';
+  canvas.id = 'chart';
+  canvas.style.maxHeight = '500px';
   canvas.style.width = '100%';
-  canvas.style.height = '420px';
+  content.appendChild(canvas);
 
-  chartWrapper.appendChild(title);
-  chartWrapper.appendChild(canvas);
-
-  root.innerHTML = '';
   root.appendChild(tabsContainer);
-  content.appendChild(statusEl);
-  content.appendChild(chartWrapper);
   root.appendChild(content);
-
-  // Utilities
-  function setStatus(text, isError = false) {
-    statusEl.textContent = text || '';
-    statusEl.style.color = isError ? 'tomato' : '#9aa4b2';
-  }
-  function clearStatus() { statusEl.textContent = ''; }
 
   async function fetchJson(url) {
     const res = await fetch(url);
@@ -80,209 +57,185 @@ const API_BASE = "http://localhost:5000/api";
   }
 
   function activateTab(tabId) {
-    if (currentTab === tabId) return;
     currentTab = tabId;
-    $$('.tab-item', tabsContainer).forEach(el => el.classList.toggle('active', el.dataset.tab === tabId));
     renderTab();
   }
 
-  function forceRefresh(tabId) {
-    cache[tabId] = { loading: false, data: null, error: null };
-    if (tabId === currentTab) renderTab();
-  }
-
-  function renderTab() {
-    const slot = cache[currentTab];
+  async function renderTab() {
     const tabCfg = tabs.find(t => t.id === currentTab);
-    title.textContent = getTitle(currentTab);
-
-    // clear previous chart
-    if (currentChart) {
-        try { currentChart.destroy(); } catch (e) {}
-        currentChart = null;
-    }
-
-    // clear previous peak table
-    const oldTable = document.querySelector('.peak-table');
-    if (oldTable) oldTable.remove();
-
-    // always ensure the canvas is visible before new render
-    const canvas = document.getElementById('reportChart');
-    if (canvas) canvas.style.display = '';
-
-    if (slot.loading) { setStatus('Loading...'); return; }
-    if (slot.error) { setStatus(`Error: ${slot.error}`, true); return; }
-    if (slot.data) {
-        clearStatus();
-        drawForTab(currentTab, slot.data);
-        return;
-    }
-
-    loadTabData(currentTab, tabCfg.endpoint);
-  }
-
-
-  function getTitle(tabId) {
-    switch (tabId) {
-      case 'peak': return 'Highest Peak Concurrent Users';
-      case 'releases': return 'Game Releases Over Time (Year)';
-      case 'platforms': return 'Platform Distribution';
-      case 'ratings': return 'Top Rated Games (Metacritic vs User Score)';
-      case 'priceScore': return 'Price vs Metacritic Score (Bubble size = Reviews)';
-      default: return '';
-    }
-  }
-
-  async function loadTabData(tabId, endpoint) {
-    const slot = cache[tabId];
-    slot.loading = true;
-    slot.error = null;
-    setStatus('Loading...');
-
     try {
-      const data = await fetchJson(endpoint);
-      slot.data = Array.isArray(data) ? data : (data && data.rows ? data.rows : []);
-      slot.loading = false;
-      if (!slot.data || slot.data.length === 0) {
-        setStatus('No data available for this report.');
-        canvas.style.display = 'none';
-      } else {
-        canvas.style.display = '';
-        clearStatus();
-        drawForTab(tabId, slot.data);
+      const data = await fetchJson(tabCfg.endpoint);
+
+      if(currentChart) {
+        currentChart.destroy();
+        currentChart = null;
       }
+      canvas.style.display = '';
+      content.querySelector('table')?.remove();
+
+      switch(currentTab){
+        case 'mostPlayed':
+          drawMostPlayedTable(data);
+          break;
+        default:
+          drawChart(currentTab, data);
+      }
+
     } catch (err) {
-      console.error('API fetch error', endpoint, err);
-      slot.error = err.message || String(err);
-      slot.loading = false;
-      setStatus(`Error: ${slot.error}`, true);
-      canvas.style.display = 'none';
+      console.error(err);
+      if(currentChart) currentChart.destroy();
+      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+      alert(`Error fetching ${tabCfg.label}: ${err.message}`);
     }
   }
 
-  // Chart render switch
-  function drawForTab(tabId, data) {
-    const ctx = canvas.getContext('2d');
-    // destroy any existing chart
-    if (currentChart) try { currentChart.destroy(); } catch (e) {}
-    switch (tabId) {
-      case 'peak': drawPeak(ctx, data); break;
-      case 'releases': drawReleases(ctx, data); break;
-      case 'platforms': drawPlatforms(ctx, data); break;
-      case 'ratings': drawRatings(ctx, data); break;
-      case 'priceScore': drawPriceBubble(ctx, data); break;
-      default: setStatus('Unknown tab', true);
-    }
-  }
-
-  // 1) Peak CCU - bar
-  function drawPeak(ctx, raw) {
-    const canvas = document.getElementById('reportChart');
+  function drawMostPlayedTable(data) {
     canvas.style.display = 'none';
+    const table = document.createElement('table');
+    table.border = '1';
+    table.cellPadding = '4';
+    table.style.borderCollapse = 'collapse';
+    table.style.width = '100%';
 
-    const wrapper = document.querySelector('.chart-wrapper');
-    if (!wrapper) return;
+    const headers = ['Rank', 'Game Name', 'Peak Users', 'Platform', 'Release Year'];
+    const thead = document.createElement('thead');
+    const trHead = document.createElement('tr');
+    headers.forEach(h=>{
+      const th = document.createElement('th');
+      th.textContent = h;
+      th.style.background='#eee';
+      trHead.appendChild(th);
+    });
+    thead.appendChild(trHead);
+    table.appendChild(thead);
 
-    const oldTable = wrapper.querySelector('.peak-table');
-    if (oldTable) oldTable.remove();
+    const tbody = document.createElement('tbody');
+    const sorted = data
+      .map(r => ({
+        name: r.GameName ?? r.appname ?? r.name ?? 'Unknown',
+        peak: Number(r.TotalPeakUsers ?? r.Peak_CCU ?? 0),
+        platform: r.Platform ?? r.platform ?? 'Unknown',
+        year: r.ReleaseYear ?? r.releaseyear ?? 'N/A'
+      }))
+      .sort((a,b)=>b.peak - a.peak);
 
-    const mapped = (raw || [])
-        .map(r => ({
-        name: r.AppName ?? r.appname ?? r.name ?? 'Unknown',
-        peak: Number(r.Peak_CCU ?? r.Peak ?? r.peak ?? 0)
-        }))
-        .sort((a, b) => b.peak - a.peak);
-
-    const table = document.createElement('div');
-    table.className = 'peak-table';
-
-    mapped.forEach((row, i) => {
-        const item = document.createElement('div');
-        item.className = 'peak-row';
-        item.innerHTML = `
-        <span class="peak-rank">${i + 1}.</span>
-        <span class="peak-name">${row.name}</span>
-        <span class="peak-value">${row.peak.toLocaleString()}</span>
-        `;
-        table.appendChild(item);
+    sorted.forEach((row,i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${row.name}</td>
+        <td>${row.peak.toLocaleString()}</td>
+        <td>${row.platform}</td>
+        <td>${row.year}</td>
+      `;
+      tbody.appendChild(tr);
     });
 
-    wrapper.appendChild(table);
+    table.appendChild(tbody);
+    content.appendChild(table);
   }
 
-  // 2) Releases over time (year) - line
-  function drawReleases(ctx, raw) {
-    const mapped = (raw || [])
-      .map(r => ({ year: r.year ?? r.Year ?? r.date ?? r.Date, count: Number(r.count ?? r.Count ?? 0) }))
-      .filter(r => r.year != null)
-      .sort((a,b) => Number(a.year) - Number(b.year));
+  function drawChart(tabId, data) {
+    const ctx = canvas.getContext('2d');
 
-    const labels = mapped.map(m => String(m.year));
-    const values = mapped.map(m => m.count);
+    switch(tabId) {
+      case 'trending': {
+        const mapped = data
+          .filter(r => r.ReleaseYear !== 'ALL YEARS')
+          .map(r => ({ year: Number(r.ReleaseYear), count: Number(r.GamesReleased) }))
+          .sort((a,b)=>a.year-b.year);
+        const labels = mapped.map(m=>m.year);
+        const values = mapped.map(m=>m.count);
 
-    currentChart = new Chart(ctx, {
-      type: 'line',
-      data: { labels, datasets: [{ label: '# Games Released', data: values, borderColor: 'rgb(130,202,157)', tension: 0.3, fill: false }] },
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
-    });
-  }
-
-  // 3) Platform distribution - pie
-  function drawPlatforms(ctx, raw) {
-    const mapped = (raw || []).map(r => ({ platform: r.platform ?? r.Platform ?? r.name ?? 'Unknown', count: Number(r.count ?? r.Count ?? r.value ?? 0) })).filter(x => x.count > 0);
-    const labels = mapped.map(m => m.platform);
-    const values = mapped.map(m => m.count);
-    const palette = ['#0088FE','#00C49F','#FFBB28','#FF6384','#845EC2'];
-
-    currentChart = new Chart(ctx, {
-      type: 'pie',
-      data: { labels, datasets: [{ data: values, backgroundColor: labels.map((_,i)=>palette[i%palette.length]) }] },
-      options: { responsive: true, maintainAspectRatio: false }
-    });
-  }
-
-  // 4) Top rated scatter/bubble (Metacritic X, User Y, reviews->radius)
-  function drawRatings(ctx, raw) {
-    const mapped = (raw || [])
-      .filter(r => (r.Metacritic_Score ?? r.metacritic_score ?? r.metacritic) != null && (r.User_Score ?? r.user_score ?? r.user) != null)
-      .map(r => {
-        const reviews = Number(r.TotalReviews ?? r.totalreviews ?? (r.Positive && r.Negative ? (Number(r.Positive)+Number(r.Negative)) : 0));
-        return { x: Number(r.Metacritic_Score ?? r.metacritic_score ?? r.metacritic), y: Number(r.User_Score ?? r.user_score ?? r.user), r: Math.min(25, Math.max(4, Math.sqrt(reviews)/20)), label: r.AppName ?? r.appname ?? r.name ?? 'Unknown' };
-      });
-
-    currentChart = new Chart(ctx, {
-      type: 'bubble',
-      data: { datasets: [{ label: 'Games', data: mapped, backgroundColor: 'rgba(136,132,216,0.9)' }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: { title: { display: true, text: 'Metacritic Score' }, min: 0, max: 100 }, y: { title: { display: true, text: 'User Score' }, min: 0, max: 10 } },
-        plugins: {
-          tooltip: { callbacks: { label: ctx => `${ctx.raw.label}: Metacritic ${ctx.raw.x}, User ${ctx.raw.y}` } }
-        }
+        currentChart = new Chart(ctx, {
+          type: 'line',
+          data: { labels, datasets:[{ label:'# Games Released', data:values, borderColor:'rgb(75,192,192)', fill:false }] },
+          options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
+        });
+        break;
       }
-    });
-  }
 
-  // 5) Price vs Metacritic bubble (price X, score Y, reviews->radius)
-  function drawPriceBubble(ctx, raw) {
-    const mapped = (raw || [])
-      .filter(r => (r.Launch_Price ?? r.launch_price ?? r.LaunchPrice) != null && (r.Metacritic_Score ?? r.metacritic_score ?? r.metacritic) != null)
-      .map(r => {
-        const reviews = Number(r.TotalReviews ?? r.totalreviews ?? r.reviews ?? 0);
-        return { x: Number(r.Launch_Price ?? r.launch_price ?? r.LaunchPrice ?? 0), y: Number(r.Metacritic_Score ?? r.metacritic_score ?? r.metacritic ?? 0), r: Math.min(30, Math.max(4, Math.sqrt(reviews)/10)), label: r.AppName ?? r.appname ?? r.name ?? 'Unknown' };
-      });
+      case 'sales': {
+        const labels = data.map(r => r.Platform);
+        const values = data.map(r => Number(r.EstimatedRevenue));
 
-    currentChart = new Chart(ctx, {
-      type: 'bubble',
-      data: { datasets: [{ label: 'Games', data: mapped, backgroundColor: 'rgba(130,202,157,0.9)' }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: { title: { display: true, text: 'Price ($)' } }, y: { title: { display: true, text: 'Metacritic Score' }, min: 0, max: 100 } },
-        plugins: { tooltip: { callbacks: { label: ctx => `${ctx.raw.label}: $${ctx.raw.x}, Score ${ctx.raw.y}` } } }
+        currentChart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels, datasets:[{ label:'Estimated Revenue', data:values, backgroundColor:'rgba(54,162,235,0.6)' }] },
+          options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
+        });
+        break;
       }
-    });
+
+      case 'priceRating': {
+        // Map data to points
+        const points = data.map(r => ({
+          x: Math.min(100, Number(r.price) || 0), // cap at $100
+          y: Number(r.metacritic) || 0
+        }));
+
+        currentChart = new Chart(ctx, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              label: 'Games',
+              data: points,
+              backgroundColor: 'rgba(255,99,132,0.7)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              title: {
+                display: true,
+                text: 'Price vs Rating'
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const d = context.raw;
+                    return `Price: $${d.x}, Metacritic: ${d.y}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                title: { display: true, text: 'Price ($)' },
+                min: 0,
+                max: 100
+              },
+              y: {
+                title: { display: true, text: 'Metacritic Score' },
+                min: 0,
+                max: 100
+              }
+            }
+          }
+        });
+        break;
+      }
+
+      case 'platforms': {
+        const labels = ['Windows','Mac','Linux'];
+        const values = [
+          data.reduce((sum,r)=>sum+Number(r.WindowsCount),0),
+          data.reduce((sum,r)=>sum+Number(r.MacCount),0),
+          data.reduce((sum,r)=>sum+Number(r.LinuxCount),0)
+        ];
+
+        currentChart = new Chart(ctx, {
+          type: 'pie',
+          data: { labels, datasets:[{ data: values, backgroundColor:['#0088FE','#FFBB28','#FF6384'] }] },
+          options: { responsive:true, maintainAspectRatio:false }
+        });
+        break;
+      }
+
+      default: break;
+    }
   }
 
   renderTab();
-
 })();
