@@ -136,6 +136,7 @@ app.get('/api/price-vs-rating', async (req, res) => {
       JOIN Reviews r ON g.ReviewsID = r.ReviewsID
       WHERE s.Launch_Price IS NOT NULL
         AND r.Metacritic_Score IS NOT NULL
+      ORDER BY r.Metacritic_Score DESC
       LIMIT 500;
     `);
 

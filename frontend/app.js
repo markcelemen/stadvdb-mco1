@@ -155,7 +155,21 @@ function getPlatformColor(platform) {
         new Chart(ctx, {
           type: 'pie',
           data: { labels, datasets:[{ data: values, backgroundColor:['#0088FE','#FFBB28','#FF6384'] }] },
-          options: { responsive:true, maintainAspectRatio:false }
+          plugins: [ChartDataLabels],
+          options: { 
+            responsive:true, maintainAspectRatio:false,
+            plugins: {
+              datalabels: {
+                color: '#222',
+                font: { weight: 'bold', size: 10 },
+                formatter: function(value, context) {
+                  const total = context.chart.data.datasets[0].data.reduce((a,b)=>a+b,0);
+                  const percent = total ? ((value/total)*100).toFixed(1) : 0;
+                  return percent + '%';
+                }
+              }
+            }
+          }
         });
         break;
       }
