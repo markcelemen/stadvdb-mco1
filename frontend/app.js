@@ -9,7 +9,7 @@ function getPlatformColor(platform) {
   }
 }
 
-(function () {
+(async function() {
   const root = document.getElementById('root') || (() => {
     const r = document.createElement('div');
     r.id = 'root';
@@ -17,38 +17,22 @@ function getPlatformColor(platform) {
     return r;
   })();
 
-  const tabs = [
-    { id: 'mostPlayed', label: 'Most Played', endpoint: `${API_BASE}/most-played` },
-    { id: 'trending', label: 'Trending Releases', endpoint: `${API_BASE}/trending-games` },
-    { id: 'sales', label: 'Sales Revenue', endpoint: `${API_BASE}/sales-revenue` },
-    { id: 'priceRating', label: 'Price vs Rating', endpoint: `${API_BASE}/price-vs-rating` },
-    { id: 'platforms', label: 'Platforms Breakdown', endpoint: `${API_BASE}/platforms-breakdown` },
+  // Main dashboard container
+  const main = document.createElement('main');
+  main.style.display = 'grid';
+  main.style.gridTemplateColumns = 'repeat(12, 1fr)';
+  main.style.gridTemplateRows = '32vh 50vh'; // taller panels
+  main.style.gap = '20px';
+  main.style.padding = '20px';
+  root.appendChild(main);
+
+  const widgets = [
+    { id: 'mostPlayed', label: 'Most Played', endpoint: `${API_BASE}/most-played`, cssClass:'panel-1', row:1, colSpan:4 },
+    { id: 'trending', label: 'Trending Releases', endpoint: `${API_BASE}/trending-games`, cssClass:'panel-2', row:2, colSpan:6 },
+    { id: 'sales', label: 'Sales Revenue', endpoint: `${API_BASE}/sales-revenue`, cssClass:'panel-3', row:1, colSpan:4 },
+    { id: 'priceRating', label: 'Price vs Rating', endpoint: `${API_BASE}/price-vs-rating`, cssClass:'panel-4', row:2, colSpan:6 },
+    { id: 'platforms', label: 'Platforms Breakdown', endpoint: `${API_BASE}/platforms-breakdown`, cssClass:'panel-5', row:1, colSpan:4 }
   ];
-
-
-  let currentTab = tabs[0].id;
-  let currentChart = null;
-
-  const tabsContainer = document.createElement('div');
-  tabsContainer.style.marginBottom = '12px';
-  tabs.forEach(t => {
-    const btn = document.createElement('button');
-    btn.textContent = t.label;
-    btn.style.marginRight = '8px';
-    btn.dataset.tab = t.id;
-    btn.addEventListener('click', () => activateTab(t.id));
-    tabsContainer.appendChild(btn);
-  });
-
-  const content = document.createElement('div');
-  const canvas = document.createElement('canvas');
-  canvas.id = 'chart';
-  canvas.style.maxHeight = '500px';
-  canvas.style.width = '100%';
-  content.appendChild(canvas);
-
-  root.appendChild(tabsContainer);
-  root.appendChild(content);
 
   async function fetchJson(url) {
     const res = await fetch(url);
@@ -56,60 +40,55 @@ function getPlatformColor(platform) {
     return res.json();
   }
 
-  function activateTab(tabId) {
-    currentTab = tabId;
-    renderTab();
-  }
+  for (const widget of widgets) {
+    const container = document.createElement('div');
+    container.className = 'chart-container ' + widget.cssClass;
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.gridColumn = `span ${widget.colSpan}`;
+    container.style.gridRow = widget.row;
 
-  async function renderTab() {
-    const tabCfg = tabs.find(t => t.id === currentTab);
+    const title = document.createElement('h3');
+    title.textContent = widget.label;
+    title.style.textAlign = 'center';
+    container.appendChild(title);
+
+    const chartWrapper = document.createElement('div');
+    chartWrapper.className = 'chart-wrapper';
+    chartWrapper.style.flex = '1';
+    chartWrapper.style.position = 'relative';
+    container.appendChild(chartWrapper);
+
+    const canvas = document.createElement('canvas');
+    canvas.id = `chart-${widget.id}`;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    chartWrapper.appendChild(canvas);
+
+    main.appendChild(container);
+
     try {
-      const data = await fetchJson(tabCfg.endpoint);
-
-      if(currentChart) {
-        currentChart.destroy();
-        currentChart = null;
+      const data = await fetchJson(widget.endpoint);
+      if (widget.id === 'mostPlayed') {
+        drawMostPlayedTable(chartWrapper, data);
+      } else {
+        drawChart(widget.id, canvas, data);
       }
-      canvas.style.display = '';
-      content.querySelector('table')?.remove();
-
-      switch(currentTab){
-        case 'mostPlayed':
-          drawMostPlayedTable(data);
-          break;
-        default:
-          drawChart(currentTab, data);
-      }
-
     } catch (err) {
       console.error(err);
-      if(currentChart) currentChart.destroy();
-      canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-      alert(`Error fetching ${tabCfg.label}: ${err.message}`);
+      const errMsg = document.createElement('p');
+      errMsg.style.color = 'red';
+      errMsg.textContent = `Error fetching ${widget.label}: ${err.message}`;
+      container.appendChild(errMsg);
     }
   }
 
-  function drawMostPlayedTable(data) {
-    canvas.style.display = 'none';
-    const table = document.createElement('table');
-    table.border = '1';
-    table.cellPadding = '4';
-    table.style.borderCollapse = 'collapse';
-    table.style.width = '100%';
+  function drawMostPlayedTable(container, data) {
+    container.innerHTML = ''; // remove canvas wrapper
+    const table = document.createElement('div');
+    table.className = 'peak-table';
+    table.style.overflowY = 'auto'; // scroll if too tall
 
-    const headers = ['Rank', 'Game Name', 'Peak Users', 'Platform', 'Release Year'];
-    const thead = document.createElement('thead');
-    const trHead = document.createElement('tr');
-    headers.forEach(h=>{
-      const th = document.createElement('th');
-      th.textContent = h;
-      th.style.background='#eee';
-      trHead.appendChild(th);
-    });
-    thead.appendChild(trHead);
-    table.appendChild(thead);
-
-    const tbody = document.createElement('tbody');
     const sorted = data
       .map(r => ({
         name: r.GameName ?? r.appname ?? r.name ?? 'Unknown',
@@ -117,106 +96,55 @@ function getPlatformColor(platform) {
         platform: r.Platform ?? r.platform ?? 'Unknown',
         year: r.ReleaseYear ?? r.releaseyear ?? 'N/A'
       }))
-      .sort((a,b)=>b.peak - a.peak);
+      .sort((a,b) => b.peak - a.peak)
+      .slice(0, 10);
 
-    sorted.forEach((row,i)=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i+1}</td>
-        <td>${row.name}</td>
-        <td>${row.peak.toLocaleString()}</td>
-        <td>${row.platform}</td>
-        <td>${row.year}</td>
+    sorted.forEach((row,i) => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'peak-row';
+      rowDiv.innerHTML = `
+        <span class="peak-rank">${i+1}</span>
+        <span class="peak-name">${row.name}</span>
+        <span class="peak-value">${row.peak.toLocaleString()}</span>
       `;
-      tbody.appendChild(tr);
+      table.appendChild(rowDiv);
     });
 
-    table.appendChild(tbody);
-    content.appendChild(table);
+    container.appendChild(table);
   }
 
-  function drawChart(tabId, data) {
+  function drawChart(id, canvas, data) {
     const ctx = canvas.getContext('2d');
-
-    switch(tabId) {
+    switch(id) {
       case 'trending': {
         const mapped = data
           .filter(r => r.ReleaseYear !== 'ALL YEARS')
           .map(r => ({ year: Number(r.ReleaseYear), count: Number(r.GamesReleased) }))
           .sort((a,b)=>a.year-b.year);
-        const labels = mapped.map(m=>m.year);
-        const values = mapped.map(m=>m.count);
-
-        currentChart = new Chart(ctx, {
+        new Chart(ctx, {
           type: 'line',
-          data: { labels, datasets:[{ label:'# Games Released', data:values, borderColor:'rgb(75,192,192)', fill:false }] },
+          data: { labels: mapped.map(m=>m.year), datasets:[{ label:'# Games Released', data:mapped.map(m=>m.count), borderColor:'rgb(75,192,192)', fill:false }] },
           options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
         });
         break;
       }
-
       case 'sales': {
-        const labels = data.map(r => r.Platform);
-        const values = data.map(r => Number(r.EstimatedRevenue));
-
-        currentChart = new Chart(ctx, {
+        new Chart(ctx, {
           type: 'bar',
-          data: { labels, datasets:[{ label:'Estimated Revenue', data:values, backgroundColor:'rgba(54,162,235,0.6)' }] },
+          data: { labels: data.map(r=>r.Platform), datasets:[{ label:'Estimated Revenue', data:data.map(r=>Number(r.EstimatedRevenue)), backgroundColor:'rgba(54,162,235,0.6)' }] },
           options: { responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } } }
         });
         break;
       }
-
       case 'priceRating': {
-        // Map data to points
-        const points = data.map(r => ({
-          x: Math.min(100, Number(r.price) || 0), // cap at $100
-          y: Number(r.metacritic) || 0
-        }));
-
-        currentChart = new Chart(ctx, {
+        const points = data.map(r=>({ x: Math.min(100, Number(r.price)||0), y: Number(r.metacritic)||0 }));
+        new Chart(ctx, {
           type: 'scatter',
-          data: {
-            datasets: [{
-              label: 'Games',
-              data: points,
-              backgroundColor: 'rgba(255,99,132,0.7)'
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              title: {
-                display: true,
-                text: 'Price vs Rating'
-              },
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    const d = context.raw;
-                    return `Price: $${d.x}, Metacritic: ${d.y}`;
-                  }
-                }
-              }
-            },
-            scales: {
-              x: {
-                title: { display: true, text: 'Price ($)' },
-                min: 0,
-                max: 100
-              },
-              y: {
-                title: { display: true, text: 'Metacritic Score' },
-                min: 0,
-                max: 100
-              }
-            }
-          }
+          data: { datasets:[{ label:'Games', data:points, backgroundColor:'rgba(255,99,132,0.7)' }] },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{ title:{ display:true, text:'Price vs Rating' }, tooltip:{ callbacks:{ label: ctx=>`Price: $${ctx.raw.x}, Metacritic: ${ctx.raw.y}` } } }, scales:{ x:{ title:{ display:true, text:'Price ($)' }, min:0, max:100 }, y:{ title:{ display:true, text:'Metacritic Score' }, min:0, max:100 } } }
         });
         break;
       }
-
       case 'platforms': {
         const labels = ['Windows','Mac','Linux'];
         const values = [
@@ -224,18 +152,14 @@ function getPlatformColor(platform) {
           data.reduce((sum,r)=>sum+Number(r.MacCount),0),
           data.reduce((sum,r)=>sum+Number(r.LinuxCount),0)
         ];
-
-        currentChart = new Chart(ctx, {
+        new Chart(ctx, {
           type: 'pie',
           data: { labels, datasets:[{ data: values, backgroundColor:['#0088FE','#FFBB28','#FF6384'] }] },
           options: { responsive:true, maintainAspectRatio:false }
         });
         break;
       }
-
       default: break;
     }
   }
-
-  renderTab();
 })();
