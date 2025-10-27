@@ -10,6 +10,19 @@ This project is a full-stack web application that performs the following:
 
 ---
 
+## Key Skills Developed
+
+This project demonstrates proficiency across the full data analytics and web development stack:
+
+- **Data Engineering:** ETL pipeline development, data extraction and web scraping (Pandas, BeautifulSoup), data transformation and cleaning
+- **Database Management:** SQL data warehousing, star schema design (fact & dimension tables), OLAP query optimization, MySQL & PostgreSQL administration
+- **Backend Development:** RESTful API development with Node.js and Express, database connectivity and ORM integration
+- **Frontend Development:** Interactive dashboard visualization, responsive UI design with HTML/CSS/JavaScript, chart library integration
+- **Business Intelligence:** KPI identification and tracking, trend analysis and insights generation, data-driven decision support
+- **DevOps & Tools:** Environment and dependency management (pyenv, npm), multi-server orchestration, debugging and troubleshooting
+
+---
+
 ## Table of Contents
 
 1.  [Prerequisites](#1-prerequisites)
@@ -276,4 +289,5 @@ To shut down all parts of the application properly:
   - **Solution 2:** Double-check `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_HOST` in both places. Ensure they match exactly.
   - **Cause 3:** Firewall blocking connection (less common for localhost).
   - **Solution 3:** Check system firewall settings.
+
 
